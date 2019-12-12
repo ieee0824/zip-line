@@ -52,8 +52,23 @@ func (f *forWin) Pointer() *bool {
 	return (*bool)(f)
 }
 
+type password string
+
+func (_ password) Usage() string {
+	return ""
+}
+
+func (p *password) Pointer() *string {
+	return (*string)(p)
+}
+
+func (p *password) String() string {
+	return string(*p)
+}
+
 type Option struct {
-	Target target
-	Output output
-	ForWin forWin
+	Target   target
+	Output   output
+	ForWin   forWin
+	Password password
 }
