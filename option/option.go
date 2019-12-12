@@ -45,7 +45,12 @@ func (o *output) String() string {
 type forWin bool
 
 func (_ forWin) Usage() string {
-	return ""
+	switch getenv.String("LANG") {
+	case "ja_JP.UTF-8":
+		return "windows向けのzipを生成する (オプション)"
+	default:
+		return "Generate zip for windows (optional)"
+	}
 }
 
 func (f *forWin) Pointer() *bool {
@@ -55,7 +60,12 @@ func (f *forWin) Pointer() *bool {
 type password string
 
 func (_ password) Usage() string {
-	return ""
+	switch getenv.String("LANG") {
+	case "ja_JP.UTF-8":
+		return "暗号化zipのパスワード(オプション)"
+	default:
+		return "Encryption zip password (optional)"
+	}
 }
 
 func (p *password) Pointer() *string {
