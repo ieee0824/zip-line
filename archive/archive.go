@@ -15,9 +15,9 @@ func addFile(zw *zip.Writer, file string, opt *option.Option) error {
 	if err != nil {
 		return err
 	}
-	if stat.IsDir() {
-		return nil
-	}
+	//if stat.IsDir() {
+	//	return nil
+	//}
 
 	r, err := os.Open(file)
 	if err != nil {
@@ -46,9 +46,12 @@ func addFile(zw *zip.Writer, file string, opt *option.Option) error {
 			return err
 		}
 	}
-	if _, err := io.Copy(w, r); err != nil {
-		return err
+	if !stat.IsDir() {
+		if _, err := io.Copy(w, r); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
