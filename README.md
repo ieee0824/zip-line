@@ -6,6 +6,7 @@ linux/mac からwindows向けのzipを文字化けさせずに生成する
 
 ### バイナリー
 OSに合わせたバイナリーをダウンロードしてパスの通った場所にコピーする
+
 https://github.com/ieee0824/zip-line/releases
 
 ### ソースコードから
