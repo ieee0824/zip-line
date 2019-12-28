@@ -76,9 +76,20 @@ func (p *password) String() string {
 	return string(*p)
 }
 
+type version bool
+
+func (_ version) Usage() string {
+	return ""
+}
+
+func (v *version) Pointer() *bool {
+	return (*bool)(v)
+}
+
 type Option struct {
 	Target   target
 	Output   output
 	ForWin   forWin
 	Password password
+	Version  version
 }
