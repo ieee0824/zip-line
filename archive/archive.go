@@ -3,6 +3,8 @@ package archive
 import (
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ieee0824/zip-line/encode"
 	"github.com/ieee0824/zip-line/option"
@@ -15,16 +17,14 @@ func addFile(zw *zip.Writer, file string, opt *option.Option) error {
 	if err != nil {
 		return err
 	}
-	//if stat.IsDir() {
-	//	return nil
-	//}
 
 	r, err := os.Open(file)
 	if err != nil {
 		return err
 	}
 	var w io.Writer
-	key := file
+	rootDir := "/" + filepath.Base(opt.Target.String())
+	key := rootDir + strings.TrimPrefix(file, opt.Target.String())
 	if opt.ForWin {
 		sjis, err := encode.ToShiftJIS(key)
 		if err != nil {
