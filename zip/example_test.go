@@ -11,7 +11,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/yeka/zip"
+	"github.com/ieee0824/zip-line/zip"
 )
 
 func ExampleWriter() {
@@ -30,7 +30,7 @@ func ExampleWriter() {
 		{"todo.txt", "Get animal handling licence.\nWrite more examples."},
 	}
 	for _, file := range files {
-		f, err := w.Create(file.Name)
+		f, err := w.Create(file.Name, (&zip.FileHeader{Name: file.Name}).FileInfo())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -81,7 +81,7 @@ func ExampleWriter_Encrypt() {
 	// write a password zip
 	raw := new(bytes.Buffer)
 	zipw := zip.NewWriter(raw)
-	w, err := zipw.Encrypt("hello.txt", "golang", zip.AES256Encryption)
+	w, err := zipw.Encrypt("hello.txt", (&zip.FileHeader{Name: "hello.txt"}).FileInfo(), "golang", zip.AES256Encryption)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -10,6 +10,8 @@ OSに合わせたバイナリーをダウンロードしてパスの通った場
 https://github.com/ieee0824/zip-line/releases
 
 ### ソースコードから
+Go 1.26.8 以上が必要です。
+
 ```
 $ go get -u github.com/ieee0824/zip-line/cmd/zipl
 ```
