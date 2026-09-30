@@ -34,6 +34,7 @@ const (
 	aes256 = 32
 )
 
+//mikoto:pure
 func aesKeyLen(strength byte) int {
 	switch strength {
 	case 1:

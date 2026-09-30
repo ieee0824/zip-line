@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-analysis:
+    name: Static analysis and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install mikoto
+        run: go install github.com/ieee0824/mikoto/cmd/mikoto@v0.0.0-20260930134506-a5434989c562
+      - name: Run mikoto
+        run: mikoto -max-lines=80 ./...
+      - name: Run go vet
+        run: go vet ./...
+      - name: Run tests
+        run: go test ./...
