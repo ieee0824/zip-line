@@ -69,56 +69,7 @@ func (w *Writer) Close() error {
 	// write central directory
 	start := w.cw.count
 	for _, h := range w.dir {
-		var buf [directoryHeaderLen]byte
-		b := writeBuf(buf[:])
-		b.uint32(uint32(directoryHeaderSignature))
-		b.uint16(h.CreatorVersion)
-		b.uint16(h.ReaderVersion)
-		b.uint16(h.Flags)
-		b.uint16(h.Method)
-		b.uint16(h.ModifiedTime)
-		b.uint16(h.ModifiedDate)
-		b.uint32(h.CRC32)
-		if h.isZip64() || h.offset > uint32max {
-			// the file needs a zip64 header. store maxint in both
-			// 32 bit size fields (and offset later) to signal that the
-			// zip64 extra header should be used.
-			b.uint32(uint32max) // compressed size
-			b.uint32(uint32max) // uncompressed size
-
-			// append a zip64 extra block to Extra
-			var buf [28]byte // 2x uint16 + 3x uint64
-			eb := writeBuf(buf[:])
-			eb.uint16(zip64ExtraId)
-			eb.uint16(24) // size = 3x uint64
-			eb.uint64(h.UncompressedSize64)
-			eb.uint64(h.CompressedSize64)
-			eb.uint64(h.offset)
-			h.Extra = append(h.Extra, buf[:]...)
-		} else {
-			b.uint32(h.CompressedSize)
-			b.uint32(h.UncompressedSize)
-		}
-		b.uint16(uint16(len(h.Name)))
-		b.uint16(uint16(len(h.Extra)))
-		b.uint16(uint16(len(h.Comment)))
-		b = b[4:] // skip disk number start and internal file attr (2x uint16)
-		b.uint32(h.ExternalAttrs)
-		if h.offset > uint32max {
-			b.uint32(uint32max)
-		} else {
-			b.uint32(uint32(h.offset))
-		}
-		if _, err := w.cw.Write(buf[:]); err != nil {
-			return err
-		}
-		if _, err := io.WriteString(w.cw, h.Name); err != nil {
-			return err
-		}
-		if _, err := w.cw.Write(h.Extra); err != nil {
-			return err
-		}
-		if _, err := io.WriteString(w.cw, h.Comment); err != nil {
+		if err := w.writeDirectoryHeader(h); err != nil {
 			return err
 		}
 	}
@@ -176,6 +127,62 @@ func (w *Writer) Close() error {
 	}
 
 	return w.cw.w.(*bufio.Writer).Flush()
+}
+
+func (w *Writer) writeDirectoryHeader(h *header) error {
+	var buf [directoryHeaderLen]byte
+	b := writeBuf(buf[:])
+	b.uint32(uint32(directoryHeaderSignature))
+	b.uint16(h.CreatorVersion)
+	b.uint16(h.ReaderVersion)
+	b.uint16(h.Flags)
+	b.uint16(h.Method)
+	b.uint16(h.ModifiedTime)
+	b.uint16(h.ModifiedDate)
+	b.uint32(h.CRC32)
+	if h.isZip64() || h.offset > uint32max {
+		// the file needs a zip64 header. store maxint in both
+		// 32 bit size fields (and offset later) to signal that the
+		// zip64 extra header should be used.
+		b.uint32(uint32max) // compressed size
+		b.uint32(uint32max) // uncompressed size
+
+		// append a zip64 extra block to Extra
+		var buf [28]byte // 2x uint16 + 3x uint64
+		eb := writeBuf(buf[:])
+		eb.uint16(zip64ExtraId)
+		eb.uint16(24) // size = 3x uint64
+		eb.uint64(h.UncompressedSize64)
+		eb.uint64(h.CompressedSize64)
+		eb.uint64(h.offset)
+		h.Extra = append(h.Extra, buf[:]...)
+	} else {
+		b.uint32(h.CompressedSize)
+		b.uint32(h.UncompressedSize)
+	}
+	b.uint16(uint16(len(h.Name)))
+	b.uint16(uint16(len(h.Extra)))
+	b.uint16(uint16(len(h.Comment)))
+	b = b[4:] // skip disk number start and internal file attr (2x uint16)
+	b.uint32(h.ExternalAttrs)
+	if h.offset > uint32max {
+		b.uint32(uint32max)
+	} else {
+		b.uint32(uint32(h.offset))
+	}
+	if _, err := w.cw.Write(buf[:]); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w.cw, h.Name); err != nil {
+		return err
+	}
+	if _, err := w.cw.Write(h.Extra); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w.cw, h.Comment); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Create adds a file to the zip file using the provided name.

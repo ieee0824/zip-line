@@ -16,6 +16,10 @@ Go 1.26.8 以上が必要です。
 $ go get -u github.com/ieee0824/zip-line/cmd/zipl
 ```
 
+## CI
+
+PR と master への push で [mikoto](https://github.com/ieee0824/mikoto) による静的解析、`go vet ./...`、`go test ./...` を実行します。mikoto は関数の行数を 80 行までに制限し、`//mikoto:pure` を付けた関数の副作用も検査します。
+
 ## オプション
 
 ```
