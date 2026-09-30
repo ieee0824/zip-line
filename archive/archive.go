@@ -1,6 +1,7 @@
 package archive
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -56,7 +57,11 @@ func addFile(zw *zip.Writer, file string, opt *option.Option) error {
 }
 
 func Archive(opt *option.Option) error {
-	zipFile, err := os.Create(opt.Output.String())
+	files, err := tree.Tree(opt.Target.String())
+	if err != nil {
+		return err
+	}
+	zipFile, err := openOutput(opt.Output.String(), files)
 	if err != nil {
 		return err
 	}
@@ -65,11 +70,6 @@ func Archive(opt *option.Option) error {
 	defer zipWriter.Flush()
 	defer zipWriter.Close()
 
-	files, err := tree.Tree(opt.Target.String())
-	if err != nil {
-		return err
-	}
-
 	for _, file := range files {
 		if err := addFile(zipWriter, file, opt); err != nil {
 			return err
@@ -77,4 +77,37 @@ func Archive(opt *option.Option) error {
 	}
 
 	return nil
+}
+
+// openOutput checks the opened file's identity before truncating it so that
+// alternate paths, symlinks, and hard links cannot overwrite an input file.
+func openOutput(path string, inputs []string) (*os.File, error) {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, err
+	}
+	ok := false
+	defer func() {
+		if !ok {
+			f.Close()
+		}
+	}()
+	outputInfo, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	for _, input := range inputs {
+		inputInfo, err := os.Stat(input)
+		if err != nil {
+			return nil, err
+		}
+		if os.SameFile(inputInfo, outputInfo) {
+			return nil, fmt.Errorf("input %q and output %q refer to the same file", input, path)
+		}
+	}
+	if err := f.Truncate(0); err != nil {
+		return nil, err
+	}
+	ok = true
+	return f, nil
 }
