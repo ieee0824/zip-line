@@ -255,6 +255,7 @@ func (fh *FileHeader) isZip64() bool {
 	return fh.CompressedSize64 > uint32max || fh.UncompressedSize64 > uint32max
 }
 
+//mikoto:pure
 func msdosModeToFileMode(m uint32) (mode os.FileMode) {
 	if m&msdosDir != 0 {
 		mode = os.ModeDir | 0777
@@ -267,6 +268,7 @@ func msdosModeToFileMode(m uint32) (mode os.FileMode) {
 	return mode
 }
 
+//mikoto:pure
 func fileModeToUnixMode(mode os.FileMode) uint32 {
 	var m uint32
 	switch mode & os.ModeType {
@@ -299,6 +301,7 @@ func fileModeToUnixMode(mode os.FileMode) uint32 {
 	return m | uint32(mode&0777)
 }
 
+//mikoto:pure
 func unixModeToFileMode(m uint32) os.FileMode {
 	mode := os.FileMode(m & 0777)
 	switch m & s_IFMT {
