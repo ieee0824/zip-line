@@ -1,6 +1,7 @@
 package archive
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,6 +84,59 @@ func TestArchiveSeparateOutput(t *testing.T) {
 		got, err := os.ReadFile(source)
 		if err != nil || string(got) != contents {
 			t.Fatalf("input changed: contents=%q, error=%v", got, err)
+		}
+	}
+}
+
+func TestArchiveDirectoryPaths(t *testing.T) {
+	for _, password := range []string{"", "secret"} { // example passwords for round-trip testing
+		for _, spelling := range []string{"input", "input/", "./input"} {
+			t.Run(password+"/"+spelling, func(t *testing.T) {
+				dir := t.TempDir()
+				t.Chdir(dir)
+				if err := os.MkdirAll("input/empty", 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile("input/a.txt", []byte("hello"), 0600); err != nil {
+					t.Fatal(err)
+				}
+				opt := new(option.Option)
+				*opt.Target.Pointer(), *opt.Output.Pointer() = spelling, "out.zip"
+				*opt.Password.Pointer() = password
+				if err := Archive(opt); err != nil {
+					t.Fatal(err)
+				}
+				r, err := zip.OpenReader("out.zip")
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer r.Close()
+				want := []string{"input/", "input/a.txt", "input/empty/"}
+				if len(r.File) != len(want) {
+					t.Fatalf("got %d entries", len(r.File))
+				}
+				for i, f := range r.File {
+					if f.Name != want[i] || f.FileInfo().IsDir() != (i != 1) {
+						t.Fatalf("unexpected entry %q, directory=%v", f.Name, f.FileInfo().IsDir())
+					}
+					if i != 1 && f.IsEncrypted() {
+						t.Fatal("directory should have no encrypted payload")
+					}
+				}
+				f := r.File[1]
+				if password != "" {
+					f.SetPassword(password)
+				}
+				rc, err := f.Open()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer rc.Close()
+				got, err := io.ReadAll(rc)
+				if err != nil || string(got) != "hello" {
+					t.Fatalf("contents=%q, error=%v", got, err)
+				}
+			})
 		}
 	}
 }
