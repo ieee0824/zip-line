@@ -1,11 +1,11 @@
 package archive
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/ieee0824/zip-line/encode"
 	"github.com/ieee0824/zip-line/option"
@@ -19,13 +19,16 @@ func addFile(zw *zip.Writer, file string, opt *option.Option) error {
 		return err
 	}
 
-	r, err := os.Open(file)
+	var w io.Writer
+	target := filepath.Clean(opt.Target.String())
+	rel, err := filepath.Rel(filepath.Dir(target), file)
 	if err != nil {
 		return err
 	}
-	var w io.Writer
-	rootDir := "/" + filepath.Base(opt.Target.String())
-	key := rootDir + strings.TrimPrefix(file, opt.Target.String())
+	key := filepath.ToSlash(rel)
+	if stat.IsDir() {
+		key += "/"
+	}
 	if opt.ForWin {
 		sjis, err := encode.ToShiftJIS(key)
 		if err != nil {
@@ -33,8 +36,8 @@ func addFile(zw *zip.Writer, file string, opt *option.Option) error {
 		}
 		key = sjis
 	}
-	switch opt.Password.String() {
-	case "":
+	switch {
+	case stat.IsDir(), opt.Password.String() == "":
 		var err error
 		w, err = zw.Create(key, stat)
 		if err != nil {
@@ -47,16 +50,18 @@ func addFile(zw *zip.Writer, file string, opt *option.Option) error {
 			return err
 		}
 	}
-	if !stat.IsDir() {
-		if _, err := io.Copy(w, r); err != nil {
-			return err
-		}
+	if stat.IsDir() {
+		return nil
 	}
-
-	return nil
+	r, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(w, r)
+	return errors.Join(copyErr, r.Close())
 }
 
-func Archive(opt *option.Option) error {
+func Archive(opt *option.Option) (err error) {
 	files, err := tree.Tree(opt.Target.String())
 	if err != nil {
 		return err
@@ -65,10 +70,10 @@ func Archive(opt *option.Option) error {
 	if err != nil {
 		return err
 	}
-	defer zipFile.Close()
 	zipWriter := zip.NewWriter(zipFile)
-	defer zipWriter.Flush()
-	defer zipWriter.Close()
+	defer func() {
+		err = errors.Join(err, zipWriter.Close(), zipFile.Close())
+	}()
 
 	for _, file := range files {
 		if err := addFile(zipWriter, file, opt); err != nil {
